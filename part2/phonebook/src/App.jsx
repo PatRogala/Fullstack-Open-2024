@@ -4,12 +4,14 @@ import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 import axios from 'axios'
 import numbersService from './services/numbers'
+import Notification from './components/Notification'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
+  const [errorMessage, setErrorMessage] = useState(null)
 
   useEffect(() => {
     numbersService.getAll()
@@ -33,6 +35,10 @@ const App = () => {
       if (window.confirm(`${newName} is already in the phonebook, replace the old number with a new one?`)) {
         numbersService.update(persons.find(person => person.name === newName).id, { ...persons.find(person => person.name === newName), number: newNumber })
         setPersons(persons.map(person => person.name === newName ? { ...person, number: newNumber } : person))
+        setErrorMessage(`Updated ${newName}`)
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 2000)
       }
       return
     }
@@ -43,6 +49,10 @@ const App = () => {
       .then(response => {
         setPersons(persons.concat(newPerson))
         setNewName('')
+        setErrorMessage(`Added ${newName}`)
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 2000)
       })
   }
 
@@ -53,13 +63,22 @@ const App = () => {
   const handleDelete = (id) => {
     if (window.confirm('Delete?')) {
       numbersService.deletePerson(id)
-      setPersons(persons.filter(person => person.id !== id))
+        .then(() => {
+          setPersons(persons.filter(person => person.id !== id))
+        })
+        .catch(error => {
+          setErrorMessage(`error: Information of ${persons.find(person => person.id === id).name} has already been removed from server`)
+          setTimeout(() => {
+            setErrorMessage(null)
+          }, 2000)
+        })
     }
   }
 
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={errorMessage} />
       <Filter filter={filter} handleFilterChange={handleFilterChange} />
       <h2>Add a new</h2>
       <PersonForm newName={newName} newNumber={newNumber} handleNameChange={handleNameChange} handleNumberChange={handleNumberChange} addPerson={addPerson} />
