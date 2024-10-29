@@ -7,6 +7,16 @@ const Person = require('./models/person')
 app.use(express.json())
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :postData'))
 
+const errorHandler = (error, request, response, next) => {
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    }
+
+    next(error)
+}
+  
+app.use(errorHandler)
+
 morgan.token('postData', (req) => {
   if (req.method === 'POST') {
     return JSON.stringify(req.body)
@@ -14,32 +24,11 @@ morgan.token('postData', (req) => {
   return ' '
 })
 
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
-
 app.get('/info', (request, response) => {
-    response.send(`<p>Phonebook has info for ${persons.length} people</p>
-    <p>${new Date()}</p>`)
+    Person.find({}).then(persons => {
+        response.send(`<p>Phonebook has info for ${persons.length} people</p>
+        <p>${new Date()}</p>`)
+    })
 })
 
 app.get('/api/persons', (request, response) => {
@@ -83,18 +72,24 @@ app.post('/api/persons', (request, response) => {
 
 app.get('/api/persons/:id', (request, response) => {
     const id = request.params.id
-    const person = persons.find(person => person.id === id)
-    if (person) {
+    Person.findById(id).then(person => {
         response.json(person)
-    } else {
-        response.status(404).end()
-    }
+    })
+})
+
+app.put('/api/persons/:id', (request, response) => {
+    const id = request.params.id
+    const person = request.body
+    Person.findByIdAndUpdate(id, person, { new: true }).then(updatedPerson => {
+        response.json(updatedPerson)
+    })
 })
 
 app.delete('/api/persons/:id', (request, response) => {
     const id = request.params.id
-    persons = persons.filter(person => person.id !== id)
-    response.status(204).end()
+    Person.findByIdAndDelete(id).then(result => {
+        response.status(204).end()
+    })
 })
 
 const PORT = 3001
