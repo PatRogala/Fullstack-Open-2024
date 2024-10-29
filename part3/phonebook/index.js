@@ -1,6 +1,8 @@
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
+require('dotenv').config()
+const Person = require('./models/person')
 
 app.use(express.json())
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :postData'))
@@ -41,7 +43,9 @@ app.get('/info', (request, response) => {
 })
 
 app.get('/api/persons', (request, response) => {
-  response.json(persons)
+  Person.find({}).then(persons => {
+    response.json(persons)
+  })
 })
 
 app.post('/api/persons', (request, response) => {
@@ -72,8 +76,9 @@ app.post('/api/persons', (request, response) => {
         number: body.number
     }
     
-    persons = persons.concat(person)
-    response.json(person)
+    Person.save(person).then(savedPerson => {
+        response.json(savedPerson)
+    })
 })
 
 app.get('/api/persons/:id', (request, response) => {
